@@ -9,8 +9,8 @@ namespace SalesforceConnector
     {
         public static IServiceCollection AddSalesforceConnector(this IServiceCollection collection, Action<SalesforceConnectorOptions> optionsConfigurator)
         {
-            collection.Configure<SalesforceConnectorOptions>(optionsConfigurator);
             collection
+                .Configure<SalesforceConnectorOptions>(optionsConfigurator)
                 .AddSingleton<ISalesforceClient, SalesforceClient>()
                 .AddSingleton<IHttpMessageService, HttpMessageService>();
             return collection;
