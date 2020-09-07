@@ -28,8 +28,8 @@ namespace SalesforceConnector.Tests
         private const string SOAP_ACTION_KEY = "SOAPAction";
         private const string SOAP_ACTION_VALUE = "\"\"";
         private const string MEDIA_TYPE_XML = "text/xml";
-        private const string LOGIN_ENDPOINT = "loginEndpoint";
-        private const string LOGOUT_ENDPOINT = "logoutEndpoint";
+        private const string LOGIN_ENDPOINT = "https://login.salesforce.com/services/Soap/c/49.0/";
+        private const string LOGOUT_ENDPOINT = "https://login.salesforce.com/services/oauth2/revoke?token=";
         private const string USERNAME = "username";
         private const string PASSWORD = "pass";
         private const string REST_QUERY_URL = "/services/data/v48.0/query/?q=";
@@ -37,6 +37,8 @@ namespace SalesforceConnector.Tests
         private const string MEDIA_TYPE_JSON = "application/json";
         private const string IDS = "?ids=";
         private const string ALL_OR_NONE_FALSE = "&allOrNone=false";
+        private const string API_VERSION = "49.0";
+        private const bool IS_PRODUCTION = true;
 
         private const string EXPECTED_BEARER = "Bearer abc123";
         private const string EXPECTED_ENDPOINT = "endpoint";
@@ -50,16 +52,17 @@ namespace SalesforceConnector.Tests
         {
             _optionsSub = Substitute.For<IOptions<SalesforceConnectorOptions>>();
             _loggerSub = Substitute.For<ILogger<HttpMessageService>>();
+            SetupOptions();
             _testedService = new HttpMessageService(_optionsSub, _loggerSub);
         }
 
         private void SetupOptions()
         {
             SalesforceConnectorOptions opts = new SalesforceConnectorOptions();
-            opts.LoginEndpoint = LOGIN_ENDPOINT;
+            opts.IsProduction = IS_PRODUCTION;
+            opts.ApiVersion = API_VERSION;
             opts.Username = USERNAME;
             opts.Password = PASSWORD;
-            opts.LogoutEndpoint = LOGOUT_ENDPOINT;
             _optionsSub.Value.Returns(opts);
         }
 
@@ -80,7 +83,6 @@ namespace SalesforceConnector.Tests
         public async Task BuildLoginMessage_CreatesMessageWithCorrectOptions()
         {
             //arrange
-            SetupOptions();
             string message = string.Format(LOGIN_MESSAGE, USERNAME, PASSWORD);
 
             //act
@@ -99,8 +101,6 @@ namespace SalesforceConnector.Tests
         public void BuildLoginMessage_CreatesMessageWithCorrectHeaders()
         {
             //arrange
-            SetupOptions();
-
             //act
             HttpRequestMessage result = _testedService.BuildLoginMessage();
 
@@ -117,8 +117,6 @@ namespace SalesforceConnector.Tests
         public void BuildLoginMessage_CreatesMessageWithCorrectMethod()
         {
             //arrange
-            SetupOptions();
-
             //act
             HttpRequestMessage result = _testedService.BuildLoginMessage();
 
@@ -130,7 +128,6 @@ namespace SalesforceConnector.Tests
         public void BuildLogoutMessage_CreatesMessageWithCorrectOptions()
         {
             //arrange
-            SetupOptions();
             SetupFields();
             string uriValue = LOGOUT_ENDPOINT + "sessionId";
 
@@ -145,8 +142,6 @@ namespace SalesforceConnector.Tests
         public void BuildLogoutMessage_CreatesMessageWithCorrectMethod()
         {
             //arrange
-            SetupOptions();
-
             //act
             HttpRequestMessage result = _testedService.BuildLogoutMessage();
 
@@ -246,7 +241,6 @@ namespace SalesforceConnector.Tests
         {
             //arrange
             SetupFields();
-            SetupOptions();
             HttpMethod expectedMethod = method as HttpMethod;
 
             //act
@@ -261,7 +255,6 @@ namespace SalesforceConnector.Tests
         {
             //arrange
             string uri = EXPECTED_ENDPOINT + UPDATE_URL;
-            SetupOptions();
             SetupFields();
             MediaTypeHeaderValue expectedMediaType = new MediaTypeHeaderValue(MEDIA_TYPE_JSON) { CharSet = CHARSET };
 
@@ -284,7 +277,6 @@ namespace SalesforceConnector.Tests
             string a1 = "a1";
             string a2 = "a2";
             string uri = $"{EXPECTED_ENDPOINT}{UPDATE_URL}{IDS}{a1},{a2}{ALL_OR_NONE_FALSE}";
-            SetupOptions();
             SetupFields();
 
             //act
@@ -302,7 +294,6 @@ namespace SalesforceConnector.Tests
         public async Task BuildDataChangeMessageAsync_BuildsPostPatchMessage_WithCorrectContent()
         {
             //arrange
-            SetupOptions();
             SetupFields();
             string expected = "{\"allOrNone\":false,\"records\":[{\"Id\":\"a1\"},{\"Id\":\"a2\"}]}";
 
