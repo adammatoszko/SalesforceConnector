@@ -20,7 +20,7 @@ namespace SalesforceConnector.Services
         private readonly ILogger<HttpMessageService> _logger;
         private readonly string _loginEndpoint;
         private readonly string _logoutEndpoint;
-        private static AuthenticationHeaderValue _authHeader;
+        private AuthenticationHeaderValue _authHeader;
 
         public HttpMessageService(IOptions<SalesforceConnectorOptions> options, ILogger<HttpMessageService> logger = default)
         {
@@ -62,11 +62,9 @@ namespace SalesforceConnector.Services
         public HttpRequestMessage BuildQueryMessage(string query, in bool isQueryMore)
         {
             string requestUri = isQueryMore
-                              ? string.Format("{0}{1}", _requestEndpoint, query)
-                              : string.Format("{0}{1}{2}", _requestEndpoint, HttpMessageServiceConsts.REST_QUERY_URL, query);
-            HttpRequestMessage message = new HttpRequestMessage(HttpMethod.Get, requestUri);
-            message.Headers.Authorization = _authHeader;
-            return message;
+                              ? _requestEndpoint + query
+                              : _requestEndpoint + HttpMessageServiceConsts.REST_QUERY_URL + query;
+            return BuildBasicMessage(HttpMethod.Get, requestUri);
         }
 
         public async Task<HttpRequestMessage> BuildDataChangeMessageAsync<T>(T[] records, HttpMethod method, bool allOrNone) where T : SalesforceObjectModel
@@ -105,14 +103,11 @@ namespace SalesforceConnector.Services
                 }
             }
             sb.Append(allOrNone ? HttpMessageServiceConsts.ALL_OR_NONE_TRUE : HttpMessageServiceConsts.ALL_OR_NONE_FALSE);
-            HttpRequestMessage message = new HttpRequestMessage(HttpMethod.Delete, sb.ToString());
-            message.Headers.Authorization = _authHeader;
-            return message;
+            return BuildBasicMessage(HttpMethod.Delete, sb.ToString());
         }
 
         private async Task<HttpRequestMessage> BuildPostPatchMessageAsync<T>(T[] records, HttpMethod method, bool allOrNone)
         {
-            HttpRequestMessage message = new HttpRequestMessage(method, _requestEndpoint + HttpMessageServiceConsts.UPDATE_URL);
             ObjectsUpdateModel<T> objects = new ObjectsUpdateModel<T>()
             {
                 AllOrNone = allOrNone,
@@ -122,10 +117,17 @@ namespace SalesforceConnector.Services
             JsonSerializer.SetDefaultResolver(StandardResolver.AllowPrivateExcludeNull);
             await JsonSerializer.SerializeAsync(str, objects).ConfigureAwait(false);
             str.Position = 0;
+            HttpRequestMessage message = BuildBasicMessage(method, _requestEndpoint + HttpMessageServiceConsts.UPDATE_URL);
             message.Content = new StreamContent(str);
-            message.Headers.Authorization = _authHeader;
             message.Content.Headers.ContentType = new MediaTypeHeaderValue(HttpMessageServiceConsts.MEDIA_TYPE_JSON);
             message.Content.Headers.ContentType.CharSet = HttpMessageServiceConsts.CHARSET;
+            return message;
+        }
+
+        private HttpRequestMessage BuildBasicMessage(HttpMethod method, string endpoint)
+        {
+            HttpRequestMessage message = new HttpRequestMessage(method, endpoint);
+            message.Headers.Authorization = _authHeader;
             return message;
         }
 
