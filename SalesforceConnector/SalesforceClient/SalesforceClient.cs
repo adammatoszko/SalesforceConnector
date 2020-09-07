@@ -57,10 +57,10 @@ namespace SalesforceConnector.Client
             }
         }
 
-        public ValueTask<List<DataModificationResultModel>> ModifyDataAsync<T>(IEnumerable<T> records, DataModificationType modificationType) where T : SalesforceObjectModel =>
-            ModifyDataAsync<T>(records.ToArray(), modificationType);
+        public ValueTask<List<DataModificationResultModel>> ModifyDataAsync<T>(IEnumerable<T> records, DataModificationType modificationType, bool allOrNone) where T : SalesforceObjectModel =>
+            ModifyDataAsync<T>(records.ToArray(), modificationType, allOrNone);
 
-        public async ValueTask<List<DataModificationResultModel>> ModifyDataAsync<T>(T[] records, DataModificationType modificationType) where T : SalesforceObjectModel
+        public async ValueTask<List<DataModificationResultModel>> ModifyDataAsync<T>(T[] records, DataModificationType modificationType, bool allOrNone) where T : SalesforceObjectModel
         {
             if (records == null || records.Length == 0)
             {
@@ -81,7 +81,7 @@ namespace SalesforceConnector.Client
                 Range r = i + 200 < records.Length ? new Range(i, i + 200) : new Range(i, records.Length);
                 T[] current = records[r];
                 _logger?.LogDebug($"Updating {current.Length} records of type {typeof(T)}");
-                HttpRequestMessage message = await _messageService.BuildDataChangeMessageAsync<T>(current, method).ConfigureAwait(false);
+                HttpRequestMessage message = await _messageService.BuildDataChangeMessageAsync<T>(current, method, allOrNone).ConfigureAwait(false);
                 HttpResponseMessage response = await _client.SendAsync(message).ConfigureAwait(false);
                 DataModificationResultModel[] res = await _messageService.ProcessResponseAsync<DataModificationResultModel[]>(response).ConfigureAwait(false);
                 results.AddRange(res);

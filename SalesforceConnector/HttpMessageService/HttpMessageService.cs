@@ -14,48 +14,38 @@ namespace SalesforceConnector.Services
 {
     internal sealed class HttpMessageService : IHttpMessageService
     {
-        private const string ENDPOINT_START = "<serverUrl>";
-        private const string ENDPOINT_END = "/services/Soap/c/";
-        private const string SESSION_ID_START = "<sessionId>";
-        private const string SESSION_ID_END = "</sessionId>";
-        private const string MEDIA_TYPE_XML = "text/xml";
-        private const string MEDIA_TYPE_JSON = "application/json";
-        private const string CHARSET = "utf-8";
-        private const string SOAP_ACTION_KEY = "SOAPAction";
-        private const string SOAP_ACTION_VALUE = "\"\"";
-        private const string REST_QUERY_URL = "/services/data/v48.0/query/?q=";
-        private const string UPDATE_URL = "/services/data/v48.0/composite/sobjects";
-        private const string ALL_OR_NONE_FALSE = "&allOrNone=false";
-        private const string ALL_OR_NONE_TRUE = "&allOrNone=true";
-        private const string IDS = "?ids=";
-
         private string _sessionId;
         private string _requestEndpoint;
         private readonly IOptions<SalesforceConnectorOptions> _options;
         private readonly ILogger<HttpMessageService> _logger;
+        private readonly string _loginEndpoint;
+        private readonly string _logoutEndpoint;
         private static AuthenticationHeaderValue _authHeader;
 
         public HttpMessageService(IOptions<SalesforceConnectorOptions> options, ILogger<HttpMessageService> logger = default)
         {
             _options = options;
             _logger = logger;
+            string environment = _options.Value.IsProduction ? "login" : "test";
+            _loginEndpoint = $"https://{environment}.salesforce.com/services/Soap/c/{_options.Value.ApiVersion}/";
+            _logoutEndpoint = $"https://{environment}.salesforce.com/services/oauth2/revoke?token=";
         }
 
         public HttpRequestMessage BuildLoginMessage()
         {
-            _logger?.LogDebug($"Building log in message for endpoint {_options.Value.LoginEndpoint}");
-            HttpRequestMessage message = new HttpRequestMessage(HttpMethod.Post, _options.Value.LoginEndpoint);
+            _logger?.LogDebug($"Building log in message for endpoint {_loginEndpoint}");
+            HttpRequestMessage message = new HttpRequestMessage(HttpMethod.Post, _loginEndpoint);
             message.Content = new StringContent(SoapAuthenticationModel.GetLoginMessage(_options.Value.Username, _options.Value.Password));
-            message.Content.Headers.ContentType.MediaType = MEDIA_TYPE_XML;
-            message.Content.Headers.ContentType.CharSet = CHARSET;
-            message.Headers.Add(SOAP_ACTION_KEY, SOAP_ACTION_VALUE);
+            message.Content.Headers.ContentType.MediaType = HttpMessageServiceConsts.MEDIA_TYPE_XML;
+            message.Content.Headers.ContentType.CharSet = HttpMessageServiceConsts.CHARSET;
+            message.Headers.Add(HttpMessageServiceConsts.SOAP_ACTION_KEY, HttpMessageServiceConsts.SOAP_ACTION_VALUE);
             return message;
         }
 
         public HttpRequestMessage BuildLogoutMessage()
         {
             _logger?.LogDebug($"Builing logout message for session {_sessionId}");
-            HttpRequestMessage message = new HttpRequestMessage(HttpMethod.Get, _options.Value.LogoutEndpoint + _sessionId);
+            HttpRequestMessage message = new HttpRequestMessage(HttpMethod.Get, _logoutEndpoint + _sessionId);
             return message;
         }
 
@@ -63,8 +53,8 @@ namespace SalesforceConnector.Services
         {
             await CheckStatusCodeAsync(response).ConfigureAwait(false);
             Memory<byte> responseContent = (await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false)).AsMemory();
-            _sessionId = ExtractElement(in responseContent, SESSION_ID_START, SESSION_ID_END);
-            _requestEndpoint = ExtractElement(in responseContent, ENDPOINT_START, ENDPOINT_END);
+            _sessionId = ExtractElement(in responseContent, HttpMessageServiceConsts.SESSION_ID_START, HttpMessageServiceConsts.SESSION_ID_END);
+            _requestEndpoint = ExtractElement(in responseContent, HttpMessageServiceConsts.ENDPOINT_START, HttpMessageServiceConsts.ENDPOINT_END);
             _authHeader = new AuthenticationHeaderValue("Bearer", _sessionId);
             _logger?.LogDebug($"Received endpoint {_requestEndpoint} and session id {_sessionId}");
         }
@@ -73,21 +63,21 @@ namespace SalesforceConnector.Services
         {
             string requestUri = isQueryMore
                               ? string.Format("{0}{1}", _requestEndpoint, query)
-                              : string.Format("{0}{1}{2}", _requestEndpoint, REST_QUERY_URL, query);
+                              : string.Format("{0}{1}{2}", _requestEndpoint, HttpMessageServiceConsts.REST_QUERY_URL, query);
             HttpRequestMessage message = new HttpRequestMessage(HttpMethod.Get, requestUri);
             message.Headers.Authorization = _authHeader;
             return message;
         }
 
-        public async Task<HttpRequestMessage> BuildDataChangeMessageAsync<T>(T[] records, HttpMethod method) where T : SalesforceObjectModel
+        public async Task<HttpRequestMessage> BuildDataChangeMessageAsync<T>(T[] records, HttpMethod method, bool allOrNone) where T : SalesforceObjectModel
         {
             if (method == HttpMethod.Post || method == HttpMethod.Patch)
             {
-                return await BuildPostPatchMessageAsync(records, method).ConfigureAwait(false);
+                return await BuildPostPatchMessageAsync(records, method, allOrNone).ConfigureAwait(false);
             }
             else if (method == HttpMethod.Delete)
             {
-                return BuildDeleteMessage(records);
+                return BuildDeleteMessage(records, allOrNone);
             }
             throw new HttpRequestException($"HttpMethod {method.Method} is not supported");
         }
@@ -100,12 +90,12 @@ namespace SalesforceConnector.Services
             return result;
         }
 
-        private HttpRequestMessage BuildDeleteMessage<T>(T[] records) where T : SalesforceObjectModel
+        private HttpRequestMessage BuildDeleteMessage<T>(T[] records, bool allOrNone) where T : SalesforceObjectModel
         {
-            StringBuilder sb = new StringBuilder(_requestEndpoint.Length + UPDATE_URL.Length + (19 * records.Length) + (_options.Value.AllOrNone ? ALL_OR_NONE_TRUE.Length : ALL_OR_NONE_FALSE.Length) + IDS.Length);
+            StringBuilder sb = new StringBuilder();
             sb.Append(_requestEndpoint)
-              .Append(UPDATE_URL)
-              .Append(IDS);
+              .Append(HttpMessageServiceConsts.UPDATE_URL)
+              .Append(HttpMessageServiceConsts.IDS);
             for (int i = 0; i < records.Length; i++)
             {
                 sb.Append(records[i].Id);
@@ -114,18 +104,18 @@ namespace SalesforceConnector.Services
                     sb.Append(',');
                 }
             }
-            sb.Append(_options.Value.AllOrNone ? ALL_OR_NONE_TRUE : ALL_OR_NONE_FALSE);
+            sb.Append(allOrNone ? HttpMessageServiceConsts.ALL_OR_NONE_TRUE : HttpMessageServiceConsts.ALL_OR_NONE_FALSE);
             HttpRequestMessage message = new HttpRequestMessage(HttpMethod.Delete, sb.ToString());
             message.Headers.Authorization = _authHeader;
             return message;
         }
 
-        private async Task<HttpRequestMessage> BuildPostPatchMessageAsync<T>(T[] records, HttpMethod method)
+        private async Task<HttpRequestMessage> BuildPostPatchMessageAsync<T>(T[] records, HttpMethod method, bool allOrNone)
         {
-            HttpRequestMessage message = new HttpRequestMessage(method, _requestEndpoint + UPDATE_URL);
+            HttpRequestMessage message = new HttpRequestMessage(method, _requestEndpoint + HttpMessageServiceConsts.UPDATE_URL);
             ObjectsUpdateModel<T> objects = new ObjectsUpdateModel<T>()
             {
-                AllOrNone = _options.Value.AllOrNone,
+                AllOrNone = allOrNone,
                 Records = records
             };
             Stream str = new MemoryStream();
@@ -134,8 +124,8 @@ namespace SalesforceConnector.Services
             str.Position = 0;
             message.Content = new StreamContent(str);
             message.Headers.Authorization = _authHeader;
-            message.Content.Headers.ContentType = new MediaTypeHeaderValue(MEDIA_TYPE_JSON);
-            message.Content.Headers.ContentType.CharSet = CHARSET;
+            message.Content.Headers.ContentType = new MediaTypeHeaderValue(HttpMessageServiceConsts.MEDIA_TYPE_JSON);
+            message.Content.Headers.ContentType.CharSet = HttpMessageServiceConsts.CHARSET;
             return message;
         }
 

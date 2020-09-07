@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Options;
-
-namespace SalesforceConnector
+﻿namespace SalesforceConnector
 {
     /// <summary>
     /// Provides configuration options for the connector.
@@ -8,16 +6,9 @@ namespace SalesforceConnector
     public class SalesforceConnectorOptions
     {
         /// <summary>
-        /// Enterprise WSDL login endpoint:
-        /// https://[instance].salesforce.com/services/Soap/c/[version]/
+        /// Version of the API to use.
         /// </summary>
-        public string LoginEndpoint { get; set; }
-
-        /// <summary>
-        /// OAuth revoke endpoint:
-        /// https://[instance].salesforce.com/services/oauth2/revoke?token=
-        /// </summary>
-        public string LogoutEndpoint { get; set; }
+        public string ApiVersion { get; set; }
 
         /// <summary>
         /// Api user username.
@@ -37,8 +28,8 @@ namespace SalesforceConnector
         public string HttpClientInstanceName { get; set; }
 
         /// <summary>
-        /// True if failing to modify one record should fail the whole batch, otherwise false.
+        /// True to use login.salesforce.com, false to use test.salesforce.com;
         /// </summary>
-        public bool AllOrNone { get; set; }
+        public bool IsProduction { get; set; }
     }
 }

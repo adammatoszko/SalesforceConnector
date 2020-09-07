@@ -75,7 +75,7 @@ namespace SalesforceConnector.Tests
         {
             //arrange
             //act
-            List<DataModificationResultModel> result = await _testedService.ModifyDataAsync(objs, DataModificationType.Update);
+            List<DataModificationResultModel> result = await _testedService.ModifyDataAsync(objs, DataModificationType.Update, true);
 
             //assert
             CollectionAssert.IsEmpty(result);
@@ -86,7 +86,7 @@ namespace SalesforceConnector.Tests
         {
             //arrange
             SetupClient(string.Empty, HttpStatusCode.OK);
-            _messageServiceSub.BuildDataChangeMessageAsync<TestSfObject>(Arg.Any<TestSfObject[]>(), Arg.Any<HttpMethod>()).Returns(_ =>
+            _messageServiceSub.BuildDataChangeMessageAsync<TestSfObject>(Arg.Any<TestSfObject[]>(), Arg.Any<HttpMethod>(), Arg.Any<bool>()).Returns(_ =>
             {
                 return new HttpRequestMessage()
                 {
@@ -98,7 +98,7 @@ namespace SalesforceConnector.Tests
             var objs = new TestSfObject[201];
 
             //act
-            var result = await _testedService.ModifyDataAsync<TestSfObject>(objs, DataModificationType.Update);
+            var result = await _testedService.ModifyDataAsync<TestSfObject>(objs, DataModificationType.Update, true);
 
             //assert
             var calls = _messageServiceSub.ReceivedCalls().ToList();
