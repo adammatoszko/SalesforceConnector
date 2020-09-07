@@ -28,11 +28,6 @@
         public string HttpClientInstanceName { get; set; }
 
         /// <summary>
-        /// True if failing to modify one record should fail the whole batch, otherwise false.
-        /// </summary>
-        public bool AllOrNone { get; set; }
-
-        /// <summary>
         /// True to use login.salesforce.com, false to use test.salesforce.com;
         /// </summary>
         public bool IsProduction { get; set; }

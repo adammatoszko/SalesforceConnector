@@ -31,8 +31,9 @@ namespace SalesforceConnector.Client
         /// <typeparam name="T">Type of records to modify. Must be SalesforceObjectModel derived.</typeparam>
         /// <param name="records">The records to be modified.</param>
         /// <param name="modificationType">Type of modification to conduct.</param>
+        /// <param name="allOrNone">True if entire batch should fail if one record fails.</param>
         /// <returns>Results of the modification.</returns>
-        ValueTask<List<DataModificationResultModel>> ModifyDataAsync<T>(T[] records, DataModificationType modificationType) where T : SalesforceObjectModel;
+        ValueTask<List<DataModificationResultModel>> ModifyDataAsync<T>(T[] records, DataModificationType modificationType, bool allOrNone) where T : SalesforceObjectModel;
 
         /// <summary>
         /// Modifies data in Salesforce.
@@ -40,7 +41,8 @@ namespace SalesforceConnector.Client
         /// <typeparam name="T">Type of records to modify. Must be SalesforceObjectModel derived.</typeparam>
         /// <param name="records">The records to be modified.</param>
         /// <param name="modificationType">Type of modification to conduct.</param>
+        /// <param name="allOrNone">True if entire batch should fail if one record fails.</param>
         /// <returns>Results of the modification.</returns>
-        ValueTask<List<DataModificationResultModel>> ModifyDataAsync<T>(IEnumerable<T> records, DataModificationType modificationType) where T : SalesforceObjectModel;
+        ValueTask<List<DataModificationResultModel>> ModifyDataAsync<T>(IEnumerable<T> records, DataModificationType modificationType, bool allOrNone) where T : SalesforceObjectModel;
     }
 }

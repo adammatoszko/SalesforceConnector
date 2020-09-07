@@ -244,7 +244,7 @@ namespace SalesforceConnector.Tests
             HttpMethod expectedMethod = method as HttpMethod;
 
             //act
-            HttpRequestMessage result = await _testedService.BuildDataChangeMessageAsync(BuildDataChangeMessageAsyncData, expectedMethod);
+            HttpRequestMessage result = await _testedService.BuildDataChangeMessageAsync(BuildDataChangeMessageAsyncData, expectedMethod, true);
 
             //assert
             Assert.AreSame(expectedMethod, result.Method);
@@ -259,7 +259,7 @@ namespace SalesforceConnector.Tests
             MediaTypeHeaderValue expectedMediaType = new MediaTypeHeaderValue(MEDIA_TYPE_JSON) { CharSet = CHARSET };
 
             //act
-            HttpRequestMessage result = await _testedService.BuildDataChangeMessageAsync(BuildDataChangeMessageAsyncData, HttpMethod.Post);
+            HttpRequestMessage result = await _testedService.BuildDataChangeMessageAsync(BuildDataChangeMessageAsyncData, HttpMethod.Post, true);
 
             //assert
             Assert.Multiple(() =>
@@ -280,7 +280,7 @@ namespace SalesforceConnector.Tests
             SetupFields();
 
             //act
-            HttpRequestMessage result = await _testedService.BuildDataChangeMessageAsync(BuildDataChangeMessageAsyncData, HttpMethod.Delete);
+            HttpRequestMessage result = await _testedService.BuildDataChangeMessageAsync(BuildDataChangeMessageAsyncData, HttpMethod.Delete, false);
 
             //assert
             Assert.Multiple(() =>
@@ -298,7 +298,7 @@ namespace SalesforceConnector.Tests
             string expected = "{\"allOrNone\":false,\"records\":[{\"Id\":\"a1\"},{\"Id\":\"a2\"}]}";
 
             //act
-            HttpRequestMessage result = await _testedService.BuildDataChangeMessageAsync(BuildDataChangeMessageAsyncData, HttpMethod.Post);
+            HttpRequestMessage result = await _testedService.BuildDataChangeMessageAsync(BuildDataChangeMessageAsyncData, HttpMethod.Post, false);
 
             //assert
             Assert.AreEqual(expected, await result.Content.ReadAsStringAsync());

@@ -69,15 +69,15 @@ namespace SalesforceConnector.Services
             return message;
         }
 
-        public async Task<HttpRequestMessage> BuildDataChangeMessageAsync<T>(T[] records, HttpMethod method) where T : SalesforceObjectModel
+        public async Task<HttpRequestMessage> BuildDataChangeMessageAsync<T>(T[] records, HttpMethod method, bool allOrNone) where T : SalesforceObjectModel
         {
             if (method == HttpMethod.Post || method == HttpMethod.Patch)
             {
-                return await BuildPostPatchMessageAsync(records, method).ConfigureAwait(false);
+                return await BuildPostPatchMessageAsync(records, method, allOrNone).ConfigureAwait(false);
             }
             else if (method == HttpMethod.Delete)
             {
-                return BuildDeleteMessage(records);
+                return BuildDeleteMessage(records, allOrNone);
             }
             throw new HttpRequestException($"HttpMethod {method.Method} is not supported");
         }
@@ -90,7 +90,7 @@ namespace SalesforceConnector.Services
             return result;
         }
 
-        private HttpRequestMessage BuildDeleteMessage<T>(T[] records) where T : SalesforceObjectModel
+        private HttpRequestMessage BuildDeleteMessage<T>(T[] records, bool allOrNone) where T : SalesforceObjectModel
         {
             StringBuilder sb = new StringBuilder();
             sb.Append(_requestEndpoint)
@@ -104,18 +104,18 @@ namespace SalesforceConnector.Services
                     sb.Append(',');
                 }
             }
-            sb.Append(_options.Value.AllOrNone ? HttpMessageServiceConsts.ALL_OR_NONE_TRUE : HttpMessageServiceConsts.ALL_OR_NONE_FALSE);
+            sb.Append(allOrNone ? HttpMessageServiceConsts.ALL_OR_NONE_TRUE : HttpMessageServiceConsts.ALL_OR_NONE_FALSE);
             HttpRequestMessage message = new HttpRequestMessage(HttpMethod.Delete, sb.ToString());
             message.Headers.Authorization = _authHeader;
             return message;
         }
 
-        private async Task<HttpRequestMessage> BuildPostPatchMessageAsync<T>(T[] records, HttpMethod method)
+        private async Task<HttpRequestMessage> BuildPostPatchMessageAsync<T>(T[] records, HttpMethod method, bool allOrNone)
         {
             HttpRequestMessage message = new HttpRequestMessage(method, _requestEndpoint + HttpMessageServiceConsts.UPDATE_URL);
             ObjectsUpdateModel<T> objects = new ObjectsUpdateModel<T>()
             {
-                AllOrNone = _options.Value.AllOrNone,
+                AllOrNone = allOrNone,
                 Records = records
             };
             Stream str = new MemoryStream();
