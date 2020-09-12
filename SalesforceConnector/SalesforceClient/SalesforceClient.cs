@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 [assembly: InternalsVisibleTo("SalesforceConnector.Tests")]
@@ -33,85 +34,109 @@ namespace SalesforceConnector.Client
 
         static SalesforceClient()
         {
-            _clientInitializer = new Lazy<HttpClient>(CreateClient, true);
+            _clientInitializer = new Lazy<HttpClient>(() => new HttpClient(), true);
         }
 
-        private static HttpClient CreateClient() => new HttpClient();
-
-        public async Task LogInAsync()
+        public async Task LogInAsync(CancellationToken token = default)
         {
-            _logger?.LogDebug("Logging in...");
-            HttpRequestMessage message = _messageService.BuildLoginMessage();
-            HttpResponseMessage response = await _client.SendAsync(message).ConfigureAwait(false);
-            await _messageService.ProcessLoginResponseAsync(response).ConfigureAwait(false);
-        }
-
-        public async Task LogOutAsync()
-        {
-            _logger?.LogDebug("Logging out...");
-            HttpRequestMessage message = _messageService.BuildLogoutMessage();
-            HttpResponseMessage response = await _client.SendAsync(message).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
+            try
             {
-                throw new HttpRequestException($"Log out failed - received status code {response.StatusCode} - {await response.Content.ReadAsStringAsync()}");
+                _logger?.LogDebug("Logging in...");
+                HttpRequestMessage message = _messageService.BuildLoginMessage();
+                HttpResponseMessage response = await _client.SendAsync(message, token).ConfigureAwait(false);
+                await _messageService.ProcessLoginResponseAsync(response, token).ConfigureAwait(false);
             }
+            catch (OperationCanceledException) { }
         }
 
-        public ValueTask<List<DataModificationResultModel>> ModifyDataAsync<T>(IEnumerable<T> records, DataModificationType modificationType, bool allOrNone) where T : SalesforceObjectModel =>
-            ModifyDataAsync<T>(records.ToArray(), modificationType, allOrNone);
-
-        public async ValueTask<List<DataModificationResultModel>> ModifyDataAsync<T>(T[] records, DataModificationType modificationType, bool allOrNone) where T : SalesforceObjectModel
+        public async Task LogOutAsync(CancellationToken token = default)
         {
-            if (records == null || records.Length == 0)
+            try
             {
-                return Enumerable.Empty<DataModificationResultModel>().ToList();
-            }
-
-            HttpMethod method = modificationType switch
-            {
-                DataModificationType.Insert => HttpMethod.Post,
-                DataModificationType.Update => HttpMethod.Patch,
-                DataModificationType.Delete => HttpMethod.Delete,
-                _ => throw new ArgumentException("Unknown data modification type")
-            };
-            List<DataModificationResultModel> results = new List<DataModificationResultModel>(records.Length);
-
-            for (int i = 0; i < records.Length; i += 200)
-            {
-                Range r = i + 200 < records.Length ? new Range(i, i + 200) : new Range(i, records.Length);
-                T[] current = records[r];
-                _logger?.LogDebug($"Updating {current.Length} records of type {typeof(T)}");
-                HttpRequestMessage message = await _messageService.BuildDataChangeMessageAsync<T>(current, method, allOrNone).ConfigureAwait(false);
-                HttpResponseMessage response = await _client.SendAsync(message).ConfigureAwait(false);
-                DataModificationResultModel[] res = await _messageService.ProcessResponseAsync<DataModificationResultModel[]>(response).ConfigureAwait(false);
-                results.AddRange(res);
-            }
-            _logger?.LogInformation(DataModificationResultLogString(results));
-            return results;
-        }
-
-        public async Task<T[]> QueryDataAsync<T>(string soql)
-        {
-            _logger?.LogDebug($"Running SOQL query: {soql}");
-            HttpRequestMessage request;
-            HttpResponseMessage response;
-            QueryResultModel<T> responseResult = default;
-            bool queryComplete = true;
-            T[] result = null;
-            do
-            {
-                request = _messageService.BuildQueryMessage(queryComplete ? soql : responseResult.NextRecords, !queryComplete);
-                response = await _client.SendAsync(request).ConfigureAwait(false);
-                responseResult = await _messageService.ProcessResponseAsync<QueryResultModel<T>>(response).ConfigureAwait(false);
-                queryComplete = responseResult.Done;
-                if (!queryComplete || result != null)
+                _logger?.LogDebug("Logging out...");
+                HttpRequestMessage message = _messageService.BuildLogoutMessage();
+                HttpResponseMessage response = await _client.SendAsync(message, token).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
                 {
-                    result ??= new T[responseResult.TotalSize];
-                    Array.Copy(responseResult.Records, 0, result, FindFirstNull(result), responseResult.Records.Length);
+                    throw new HttpRequestException($"Log out failed - received status code {response.StatusCode} - {await response.Content.ReadAsStringAsync()}");
                 }
-            } while (!queryComplete);
+            }
+            catch (OperationCanceledException) { }
+        }
 
-            return result ?? responseResult.Records;
+        public ValueTask<List<DataModificationResultModel>> ModifyDataAsync<T>(IEnumerable<T> records, DataModificationType modificationType, bool allOrNone, CancellationToken token = default) where T : SalesforceObjectModel =>
+            ModifyDataAsync<T>(records.ToArray(), modificationType, allOrNone, token);
+
+        public async ValueTask<List<DataModificationResultModel>> ModifyDataAsync<T>(T[] records, DataModificationType modificationType, bool allOrNone, CancellationToken token = default) where T : SalesforceObjectModel
+        {
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                if (records == null || records.Length == 0)
+                {
+                    return Enumerable.Empty<DataModificationResultModel>().ToList();
+                }
+
+                HttpMethod method = modificationType switch
+                {
+                    DataModificationType.Insert => HttpMethod.Post,
+                    DataModificationType.Update => HttpMethod.Patch,
+                    DataModificationType.Delete => HttpMethod.Delete,
+                    _ => throw new ArgumentException("Unknown data modification type")
+                };
+                List<DataModificationResultModel> results = new List<DataModificationResultModel>(records.Length);
+
+                for (int i = 0; i < records.Length; i += 200)
+                {
+                    token.ThrowIfCancellationRequested();
+                    Range r = i + 200 < records.Length ? new Range(i, i + 200) : new Range(i, records.Length);
+                    T[] current = records[r];
+                    _logger?.LogDebug($"Updating {current.Length} records of type {typeof(T)}");
+                    HttpRequestMessage message = await _messageService.BuildDataChangeMessageAsync<T>(current, method, allOrNone, token).ConfigureAwait(false);
+                    HttpResponseMessage response = await _client.SendAsync(message, token).ConfigureAwait(false);
+                    DataModificationResultModel[] res = await _messageService.ProcessResponseAsync<DataModificationResultModel[]>(response, token).ConfigureAwait(false);
+                    results.AddRange(res);
+                }
+                _logger?.LogInformation(DataModificationResultLogString(results));
+                return results;
+            }
+            catch (OperationCanceledException)
+            {
+                return await Task.FromCanceled<List<DataModificationResultModel>>(token).ConfigureAwait(false);
+            }
+        }
+
+        public async Task<T[]> QueryDataAsync<T>(string soql, CancellationToken token = default)
+        {
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                _logger?.LogDebug($"Running SOQL query: {soql}");
+                HttpRequestMessage request;
+                HttpResponseMessage response;
+                QueryResultModel<T> responseResult = default;
+                bool queryComplete = true;
+                T[] result = null;
+                do
+                {
+                    token.ThrowIfCancellationRequested();
+                    request = _messageService.BuildQueryMessage(queryComplete ? soql : responseResult.NextRecords, !queryComplete);
+                    response = await _client.SendAsync(request, token).ConfigureAwait(false);
+                    responseResult = await _messageService.ProcessResponseAsync<QueryResultModel<T>>(response, token).ConfigureAwait(false);
+                    queryComplete = responseResult.Done;
+                    if (!queryComplete || result != null)
+                    {
+                        result ??= new T[responseResult.TotalSize];
+                        Array.Copy(responseResult.Records, 0, result, FindFirstNull(result), responseResult.Records.Length);
+                    }
+                } while (!queryComplete);
+
+                return result ?? responseResult.Records;
+            }
+            catch (OperationCanceledException)
+            {
+                return await Task.FromCanceled<T[]>(token).ConfigureAwait(false);
+            }
         }
 
         private int FindFirstNull<T>(T[] array)
@@ -123,7 +148,7 @@ namespace SalesforceConnector.Client
                     return i;
                 }
             }
-            throw new ArgumentOutOfRangeException("No null elements in the array");
+            throw new ArgumentOutOfRangeException("No null elements in the query result array. Cannot complete query operation.");
         }
 
         private string DataModificationResultLogString(List<DataModificationResultModel> resultCollection)

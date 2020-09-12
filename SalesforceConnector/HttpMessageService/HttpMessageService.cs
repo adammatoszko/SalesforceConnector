@@ -6,6 +6,7 @@ using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Utf8Json;
 using Utf8Json.Resolvers;
@@ -49,10 +50,11 @@ namespace SalesforceConnector.Services
             return message;
         }
 
-        public async Task ProcessLoginResponseAsync(HttpResponseMessage response)
+        public async Task ProcessLoginResponseAsync(HttpResponseMessage response, CancellationToken token)
         {
+            token.ThrowIfCancellationRequested();
             await CheckStatusCodeAsync(response).ConfigureAwait(false);
-            Memory<byte> responseContent = (await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false)).AsMemory();
+            ReadOnlyMemory<byte> responseContent = (await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false)).AsMemory();
             _sessionId = ExtractElement(in responseContent, HttpMessageServiceConsts.SESSION_ID_START, HttpMessageServiceConsts.SESSION_ID_END);
             _requestEndpoint = ExtractElement(in responseContent, HttpMessageServiceConsts.ENDPOINT_START, HttpMessageServiceConsts.ENDPOINT_END);
             _authHeader = new AuthenticationHeaderValue("Bearer", _sessionId);
@@ -67,11 +69,12 @@ namespace SalesforceConnector.Services
             return BuildBasicMessage(HttpMethod.Get, requestUri);
         }
 
-        public async Task<HttpRequestMessage> BuildDataChangeMessageAsync<T>(T[] records, HttpMethod method, bool allOrNone) where T : SalesforceObjectModel
+        public async Task<HttpRequestMessage> BuildDataChangeMessageAsync<T>(T[] records, HttpMethod method, bool allOrNone, CancellationToken token) where T : SalesforceObjectModel
         {
+            token.ThrowIfCancellationRequested();
             if (method == HttpMethod.Post || method == HttpMethod.Patch)
             {
-                return await BuildPostPatchMessageAsync(records, method, allOrNone).ConfigureAwait(false);
+                return await BuildPostPatchMessageAsync(records, method, allOrNone, token).ConfigureAwait(false);
             }
             else if (method == HttpMethod.Delete)
             {
@@ -80,8 +83,9 @@ namespace SalesforceConnector.Services
             throw new HttpRequestException($"HttpMethod {method.Method} is not supported");
         }
 
-        public async Task<T> ProcessResponseAsync<T>(HttpResponseMessage message)
+        public async Task<T> ProcessResponseAsync<T>(HttpResponseMessage message, CancellationToken token)
         {
+            token.ThrowIfCancellationRequested();
             await CheckStatusCodeAsync(message).ConfigureAwait(false);
             Stream contentStream = await message.Content.ReadAsStreamAsync().ConfigureAwait(false);
             T result = await JsonSerializer.DeserializeAsync<T>(contentStream);
@@ -106,8 +110,9 @@ namespace SalesforceConnector.Services
             return BuildBasicMessage(HttpMethod.Delete, sb.ToString());
         }
 
-        private async Task<HttpRequestMessage> BuildPostPatchMessageAsync<T>(T[] records, HttpMethod method, bool allOrNone)
+        private async Task<HttpRequestMessage> BuildPostPatchMessageAsync<T>(T[] records, HttpMethod method, bool allOrNone, CancellationToken token)
         {
+            token.ThrowIfCancellationRequested();
             ObjectsUpdateModel<T> objects = new ObjectsUpdateModel<T>()
             {
                 AllOrNone = allOrNone,
@@ -140,15 +145,15 @@ namespace SalesforceConnector.Services
             }
         }
 
-        private string ExtractElement(in Memory<byte> responseBytes, string startSequence, string endSequence)
+        private string ExtractElement(in ReadOnlyMemory<byte> responseBytes, string startSequence, string endSequence)
         {
-            Span<byte> start = Encoding.UTF8.GetBytes(startSequence).AsSpan();
-            Span<byte> end = Encoding.UTF8.GetBytes(endSequence).AsSpan();
+            ReadOnlySpan<byte> start = Encoding.UTF8.GetBytes(startSequence).AsSpan();
+            ReadOnlySpan<byte> end = Encoding.UTF8.GetBytes(endSequence).AsSpan();
             FindIndexes(in responseBytes, in start, in end, out int startLocation, out int length);
             return Encoding.UTF8.GetString(responseBytes.Span.Slice(startLocation, length));
         }
 
-        private void FindIndexes(in Memory<byte> responseBytes, in Span<byte> startSequence, in Span<byte> endSequence, out int start, out int length)
+        private void FindIndexes(in ReadOnlyMemory<byte> responseBytes, in ReadOnlySpan<byte> startSequence, in ReadOnlySpan<byte> endSequence, out int start, out int length)
         {
             start = responseBytes.Span.IndexOf(startSequence) + startSequence.Length;
             int end = responseBytes.Span.IndexOf(endSequence);
