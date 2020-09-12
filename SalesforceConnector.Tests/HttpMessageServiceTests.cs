@@ -32,8 +32,8 @@ namespace SalesforceConnector.Tests
         private const string LOGOUT_ENDPOINT = "https://login.salesforce.com/services/oauth2/revoke?token=";
         private const string USERNAME = "username";
         private const string PASSWORD = "pass";
-        private const string REST_QUERY_URL = "/services/data/v48.0/query/?q=";
-        private const string UPDATE_URL = "/services/data/v48.0/composite/sobjects";
+        private const string REST_QUERY_URL = "/services/data/v49.0/query/?q=";
+        private const string UPDATE_URL = "/services/data/v49.0/composite/sobjects";
         private const string MEDIA_TYPE_JSON = "application/json";
         private const string IDS = "?ids=";
         private const string ALL_OR_NONE_FALSE = "&allOrNone=false";

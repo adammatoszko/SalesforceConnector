@@ -19,6 +19,8 @@ namespace SalesforceConnector.Services
         private string _requestEndpoint;
         private readonly IOptions<SalesforceConnectorOptions> _options;
         private readonly ILogger<HttpMessageService> _logger;
+        private readonly string _updateEndpoint;
+        private readonly string _queryEndpoint;
         private readonly string _loginEndpoint;
         private readonly string _logoutEndpoint;
         private AuthenticationHeaderValue _authHeader;
@@ -28,8 +30,10 @@ namespace SalesforceConnector.Services
             _options = options;
             _logger = logger;
             string environment = _options.Value.IsProduction ? "login" : "test";
-            _loginEndpoint = $"https://{environment}.salesforce.com/services/Soap/c/{_options.Value.ApiVersion}/";
-            _logoutEndpoint = $"https://{environment}.salesforce.com/services/oauth2/revoke?token=";
+            _loginEndpoint = string.Format(HttpMessageServiceConsts.LOGIN_URL, environment, _options.Value.ApiVersion);
+            _logoutEndpoint = string.Format(HttpMessageServiceConsts.LOGOUT_URL, environment);
+            _updateEndpoint = string.Format(HttpMessageServiceConsts.UPDATE_URL, _options.Value.ApiVersion);
+            _queryEndpoint = string.Format(HttpMessageServiceConsts.QUERY_URL, _options.Value.ApiVersion);
         }
 
         public HttpRequestMessage BuildLoginMessage()
@@ -65,7 +69,7 @@ namespace SalesforceConnector.Services
         {
             string requestUri = isQueryMore
                               ? _requestEndpoint + query
-                              : _requestEndpoint + HttpMessageServiceConsts.REST_QUERY_URL + query;
+                              : _requestEndpoint + _queryEndpoint + query;
             return BuildBasicMessage(HttpMethod.Get, requestUri);
         }
 
@@ -96,7 +100,7 @@ namespace SalesforceConnector.Services
         {
             StringBuilder sb = new StringBuilder();
             sb.Append(_requestEndpoint)
-              .Append(HttpMessageServiceConsts.UPDATE_URL)
+              .Append(_updateEndpoint)
               .Append(HttpMessageServiceConsts.IDS);
             for (int i = 0; i < records.Length; i++)
             {
@@ -122,7 +126,7 @@ namespace SalesforceConnector.Services
             JsonSerializer.SetDefaultResolver(StandardResolver.AllowPrivateExcludeNull);
             await JsonSerializer.SerializeAsync(str, objects).ConfigureAwait(false);
             str.Position = 0;
-            HttpRequestMessage message = BuildBasicMessage(method, _requestEndpoint + HttpMessageServiceConsts.UPDATE_URL);
+            HttpRequestMessage message = BuildBasicMessage(method, _requestEndpoint + _updateEndpoint);
             message.Content = new StreamContent(str);
             message.Content.Headers.ContentType = new MediaTypeHeaderValue(HttpMessageServiceConsts.MEDIA_TYPE_JSON);
             message.Content.Headers.ContentType.CharSet = HttpMessageServiceConsts.CHARSET;
