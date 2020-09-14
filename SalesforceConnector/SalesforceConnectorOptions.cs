@@ -6,7 +6,7 @@
     public class SalesforceConnectorOptions
     {
         /// <summary>
-        /// Version of the API to use.
+        /// Version of the API to use, formatted as ##.#
         /// </summary>
         public string ApiVersion { get; set; }
 

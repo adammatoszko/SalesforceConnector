@@ -32,8 +32,8 @@ namespace SalesforceConnector.Tests
         private const string LOGOUT_ENDPOINT = "https://login.salesforce.com/services/oauth2/revoke?token=";
         private const string USERNAME = "username";
         private const string PASSWORD = "pass";
-        private const string REST_QUERY_URL = "/services/data/v48.0/query/?q=";
-        private const string UPDATE_URL = "/services/data/v48.0/composite/sobjects";
+        private const string REST_QUERY_URL = "/services/data/v49.0/query/?q=";
+        private const string UPDATE_URL = "/services/data/v49.0/composite/sobjects";
         private const string MEDIA_TYPE_JSON = "application/json";
         private const string IDS = "?ids=";
         private const string ALL_OR_NONE_FALSE = "&allOrNone=false";
@@ -161,7 +161,7 @@ namespace SalesforceConnector.Tests
             //assert
             Assert.ThrowsAsync(typeof(HttpRequestException), async () =>
             {
-                await _testedService.ProcessLoginResponseAsync(msg);
+                await _testedService.ProcessLoginResponseAsync(msg, default);
             });
         }
 
@@ -182,7 +182,7 @@ namespace SalesforceConnector.Tests
             FieldInfo headerField = fields.Find(x => x.Name == "_authHeader");
 
             //act
-            await _testedService.ProcessLoginResponseAsync(msg);
+            await _testedService.ProcessLoginResponseAsync(msg, default);
 
             //assert
             Assert.Multiple(() =>
@@ -244,7 +244,7 @@ namespace SalesforceConnector.Tests
             HttpMethod expectedMethod = method as HttpMethod;
 
             //act
-            HttpRequestMessage result = await _testedService.BuildDataChangeMessageAsync(BuildDataChangeMessageAsyncData, expectedMethod, true);
+            HttpRequestMessage result = await _testedService.BuildDataChangeMessageAsync(BuildDataChangeMessageAsyncData, expectedMethod, true, default);
 
             //assert
             Assert.AreSame(expectedMethod, result.Method);
@@ -259,7 +259,7 @@ namespace SalesforceConnector.Tests
             MediaTypeHeaderValue expectedMediaType = new MediaTypeHeaderValue(MEDIA_TYPE_JSON) { CharSet = CHARSET };
 
             //act
-            HttpRequestMessage result = await _testedService.BuildDataChangeMessageAsync(BuildDataChangeMessageAsyncData, HttpMethod.Post, true);
+            HttpRequestMessage result = await _testedService.BuildDataChangeMessageAsync(BuildDataChangeMessageAsyncData, HttpMethod.Post, true, default);
 
             //assert
             Assert.Multiple(() =>
@@ -280,7 +280,7 @@ namespace SalesforceConnector.Tests
             SetupFields();
 
             //act
-            HttpRequestMessage result = await _testedService.BuildDataChangeMessageAsync(BuildDataChangeMessageAsyncData, HttpMethod.Delete, false);
+            HttpRequestMessage result = await _testedService.BuildDataChangeMessageAsync(BuildDataChangeMessageAsyncData, HttpMethod.Delete, false, default);
 
             //assert
             Assert.Multiple(() =>
@@ -298,7 +298,7 @@ namespace SalesforceConnector.Tests
             string expected = "{\"allOrNone\":false,\"records\":[{\"Id\":\"a1\"},{\"Id\":\"a2\"}]}";
 
             //act
-            HttpRequestMessage result = await _testedService.BuildDataChangeMessageAsync(BuildDataChangeMessageAsyncData, HttpMethod.Post, false);
+            HttpRequestMessage result = await _testedService.BuildDataChangeMessageAsync(BuildDataChangeMessageAsyncData, HttpMethod.Post, false, default);
 
             //assert
             Assert.AreEqual(expected, await result.Content.ReadAsStringAsync());
@@ -318,7 +318,7 @@ namespace SalesforceConnector.Tests
             //assert
             Assert.ThrowsAsync(typeof(HttpRequestException), async () =>
             {
-                await _testedService.ProcessResponseAsync<TestSfObject>(message);
+                await _testedService.ProcessResponseAsync<TestSfObject>(message, default);
             });
         }
 
@@ -334,7 +334,7 @@ namespace SalesforceConnector.Tests
             };
 
             //act
-            TestSfObject[] result = await _testedService.ProcessResponseAsync<TestSfObject[]>(msg);
+            TestSfObject[] result = await _testedService.ProcessResponseAsync<TestSfObject[]>(msg, default);
 
             //assert
             Assert.Multiple(() =>

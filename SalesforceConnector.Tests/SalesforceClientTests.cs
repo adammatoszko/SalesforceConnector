@@ -86,7 +86,7 @@ namespace SalesforceConnector.Tests
         {
             //arrange
             SetupClient(string.Empty, HttpStatusCode.OK);
-            _messageServiceSub.BuildDataChangeMessageAsync<TestSfObject>(Arg.Any<TestSfObject[]>(), Arg.Any<HttpMethod>(), Arg.Any<bool>()).Returns(_ =>
+            _messageServiceSub.BuildDataChangeMessageAsync<TestSfObject>(Arg.Any<TestSfObject[]>(), Arg.Any<HttpMethod>(), Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns(_ =>
             {
                 return new HttpRequestMessage()
                 {
@@ -135,7 +135,7 @@ namespace SalesforceConnector.Tests
             {
                 return new HttpRequestMessage(HttpMethod.Get, "https://someuri");
             });
-            _messageServiceSub.ProcessResponseAsync<QueryResultModel<TestSfObject>>(Arg.Any<HttpResponseMessage>()).Returns(x =>
+            _messageServiceSub.ProcessResponseAsync<QueryResultModel<TestSfObject>>(Arg.Any<HttpResponseMessage>(), Arg.Any<CancellationToken>()).Returns(x =>
             {
                 if (isDone)
                 {
