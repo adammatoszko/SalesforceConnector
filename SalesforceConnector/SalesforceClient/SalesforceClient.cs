@@ -88,7 +88,6 @@ namespace SalesforceConnector.Client
 
                 for (int i = 0; i < records.Length; i += 200)
                 {
-                    token.ThrowIfCancellationRequested();
                     Range r = i + 200 < records.Length ? new Range(i, i + 200) : new Range(i, records.Length);
                     T[] current = records[r];
                     _logger?.LogDebug($"Updating {current.Length} records of type {typeof(T)}");
@@ -119,7 +118,6 @@ namespace SalesforceConnector.Client
                 T[] result = null;
                 do
                 {
-                    token.ThrowIfCancellationRequested();
                     request = _messageService.BuildQueryMessage(queryComplete ? soql : responseResult.NextRecords, !queryComplete);
                     response = await _client.SendAsync(request, token).ConfigureAwait(false);
                     responseResult = await _messageService.ProcessResponseAsync<QueryResultModel<T>>(response, token).ConfigureAwait(false);
