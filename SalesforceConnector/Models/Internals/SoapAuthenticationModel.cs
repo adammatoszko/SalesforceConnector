@@ -1,4 +1,4 @@
-﻿namespace SalesforceConnector.Models
+﻿namespace SalesforceConnector.Models.Internals
 {
     internal static class SoapAuthenticationModel
     {

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Options;
 using SalesforceConnector.Enums;
 using SalesforceConnector.Models;
+using SalesforceConnector.Models.Internals;
 using SalesforceConnector.Services;
 using System;
 using System.Collections.Generic;
@@ -118,7 +119,7 @@ namespace SalesforceConnector.Client
                 T[] result = null;
                 do
                 {
-                    request = _messageService.BuildQueryMessage(queryComplete ? soql : responseResult.NextRecords, !queryComplete);
+                    request = _messageService.BuildQueryMessage(queryComplete ? soql : responseResult.NextRecordsUrl, !queryComplete);
                     response = await _client.SendAsync(request, token).ConfigureAwait(false);
                     responseResult = await _messageService.ProcessResponseAsync<QueryResultModel<T>>(response, token).ConfigureAwait(false);
                     queryComplete = responseResult.Done;

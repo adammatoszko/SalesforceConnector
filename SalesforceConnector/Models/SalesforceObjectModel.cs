@@ -9,9 +9,9 @@ namespace SalesforceConnector.Models
         [DataMember(Name = "attributes")]
         public SalesforceAttributeModel Attributes { get; }
 
-        public SalesforceObjectModel(string objectType)
+        public SalesforceObjectModel(string type)
         {
-            Attributes = new SalesforceAttributeModel(objectType);
+            Attributes = new SalesforceAttributeModel(type);
         }
     }
 }

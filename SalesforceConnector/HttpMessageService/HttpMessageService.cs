@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SalesforceConnector.Models;
+using SalesforceConnector.Models.Internals;
 using System;
 using System.IO;
 using System.Net.Http;
@@ -92,7 +93,7 @@ namespace SalesforceConnector.Services
             token.ThrowIfCancellationRequested();
             await CheckStatusCodeAsync(message).ConfigureAwait(false);
             Stream contentStream = await message.Content.ReadAsStreamAsync().ConfigureAwait(false);
-            T result = await JsonSerializer.DeserializeAsync<T>(contentStream);
+            T result = await JsonSerializer.DeserializeAsync<T>(contentStream, StandardResolver.AllowPrivate);
             return result;
         }
 
@@ -117,11 +118,7 @@ namespace SalesforceConnector.Services
         private async Task<HttpRequestMessage> BuildPostPatchMessageAsync<T>(T[] records, HttpMethod method, bool allOrNone, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
-            ObjectsUpdateModel<T> objects = new ObjectsUpdateModel<T>()
-            {
-                AllOrNone = allOrNone,
-                Records = records
-            };
+            ObjectsUpdateModel<T> objects = new ObjectsUpdateModel<T>(allOrNone, records);
             Stream str = new MemoryStream();
             JsonSerializer.SetDefaultResolver(StandardResolver.AllowPrivateExcludeNull);
             await JsonSerializer.SerializeAsync(str, objects).ConfigureAwait(false);
