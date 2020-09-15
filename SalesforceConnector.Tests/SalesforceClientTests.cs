@@ -4,6 +4,7 @@ using NUnit.Framework;
 using SalesforceConnector.Client;
 using SalesforceConnector.Enums;
 using SalesforceConnector.Models;
+using SalesforceConnector.Models.Internals;
 using SalesforceConnector.Services;
 using System;
 using System.Collections.Generic;
@@ -139,36 +140,18 @@ namespace SalesforceConnector.Tests
             {
                 if (isDone)
                 {
-                    return new QueryResultModel<TestSfObject>()
-                    {
-                        Done = true,
-                        NextRecords = null,
-                        Records = new TestSfObject[] { new TestSfObject(), new TestSfObject() },
-                        TotalSize = 2
-                    };
+                    return new QueryResultModel<TestSfObject>(2, true, new TestSfObject[] { new TestSfObject(), new TestSfObject() }, null);
                 }
                 else
                 {
                     if (iteration == 0)
                     {
                         iteration++;
-                        return new QueryResultModel<TestSfObject>()
-                        {
-                            Done = false,
-                            NextRecords = null,
-                            Records = new TestSfObject[] { new TestSfObject(), new TestSfObject() },
-                            TotalSize = 4
-                        };
+                        return new QueryResultModel<TestSfObject>(4, false, new TestSfObject[] { new TestSfObject(), new TestSfObject() }, null);
                     }
                     else
                     {
-                        return new QueryResultModel<TestSfObject>()
-                        {
-                            Done = true,
-                            NextRecords = null,
-                            Records = new TestSfObject[] { new TestSfObject(), new TestSfObject() },
-                            TotalSize = 2
-                        };
+                        return new QueryResultModel<TestSfObject>(2, true, new TestSfObject[] { new TestSfObject(), new TestSfObject() }, null);
                     }
                 }
             });

@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace SalesforceConnector.Client
 {
+    /// <summary>
+    /// Client used to communicate with Salesforce.
+    /// </summary>
     public interface ISalesforceClient
     {
         /// <summary>

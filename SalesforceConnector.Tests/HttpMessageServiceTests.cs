@@ -295,7 +295,7 @@ namespace SalesforceConnector.Tests
         {
             //arrange
             SetupFields();
-            string expected = "{\"allOrNone\":false,\"records\":[{\"Id\":\"a1\"},{\"Id\":\"a2\"}]}";
+            string expected = "{\"allOrNone\":false,\"records\":[{\"Id\":\"a1\",\"attributes\":{\"type\":\"testSfObject\"}},{\"Id\":\"a2\",\"attributes\":{\"type\":\"testSfObject\"}}]}";
 
             //act
             HttpRequestMessage result = await _testedService.BuildDataChangeMessageAsync(BuildDataChangeMessageAsyncData, HttpMethod.Post, false, default);
@@ -348,5 +348,6 @@ namespace SalesforceConnector.Tests
 
     public class TestSfObject : SalesforceObjectModel
     {
+        public TestSfObject() : base("testSfObject") { }
     }
 }
