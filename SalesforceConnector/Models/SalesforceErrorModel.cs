@@ -29,7 +29,7 @@ namespace SalesforceConnector.Models
         public string[] Fields { get; }
 
         [SerializationConstructor]
-        public SalesforceErrorModel(string statusCode, string message, string[] fields)
+        internal SalesforceErrorModel(string statusCode, string message, string[] fields)
         {
             StatusCode = statusCode;
             Message = message;

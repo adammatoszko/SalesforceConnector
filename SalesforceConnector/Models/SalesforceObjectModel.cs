@@ -18,6 +18,10 @@ namespace SalesforceConnector.Models
         [DataMember(Name = "attributes")]
         public SalesforceAttributeModel Attributes { get; }
 
+        /// <summary>
+        /// Base constructor.
+        /// </summary>
+        /// <param name="type">Salesforce object name.</param>
         public SalesforceObjectModel(string type)
         {
             Attributes = new SalesforceAttributeModel(type);

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace SalesforceConnector.Services
 {
-    public interface IHttpMessageService
+    internal interface IHttpMessageService
     {
         HttpRequestMessage BuildLoginMessage();
         Task ProcessLoginResponseAsync(HttpResponseMessage response, CancellationToken token);
