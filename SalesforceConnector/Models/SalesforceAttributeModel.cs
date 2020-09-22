@@ -13,7 +13,7 @@ namespace SalesforceConnector.Models
         [DataMember(Name = "type")]
         public string Type { get; }
 
-        public SalesforceAttributeModel(string type)
+        internal SalesforceAttributeModel(string type)
         {
             Type = type;
         }

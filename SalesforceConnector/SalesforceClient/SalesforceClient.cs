@@ -16,6 +16,8 @@ using System.Threading.Tasks;
 [assembly: InternalsVisibleTo("SalesforceConnector.Tests")]
 [assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
 
+#pragma warning disable CS1591
+
 namespace SalesforceConnector.Client
 {
     public class SalesforceClient : ISalesforceClient
@@ -25,7 +27,7 @@ namespace SalesforceConnector.Client
         private readonly IHttpMessageService _messageService;
         private readonly HttpClient _client;
 
-        public SalesforceClient(IHttpMessageService messageService, IOptions<SalesforceConnectorOptions> options, IHttpClientFactory clientFactory = default, ILogger<SalesforceClient> logger = default, HttpClient client = default)
+        internal SalesforceClient(IHttpMessageService messageService, IOptions<SalesforceConnectorOptions> options, IHttpClientFactory clientFactory = default, ILogger<SalesforceClient> logger = default, HttpClient client = default)
         {
             _logger = logger;
             _messageService = messageService;
