@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using NSubstitute;
+using NSubstitute.ReceivedExtensions;
 using NUnit.Framework;
 using SalesforceConnector.Client;
 using SalesforceConnector.Enums;
@@ -12,6 +13,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -162,6 +164,22 @@ namespace SalesforceConnector.Tests
 
             //assert
             Assert.AreEqual(count, result.Length);
+        }
+
+        [Test]
+        public void LoginAsync_ShouldThrowWhenCalledWhileLoginInProgress()
+        {
+            //arrange
+            SetupClient(string.Empty, HttpStatusCode.OK);
+            _messageServiceSub.BuildLoginMessage().Returns(_ => new HttpRequestMessage { RequestUri = new Uri("https://someUri") });
+
+            //act
+            var t1 = Task.Run(async () => await _testedService.LogInAsync());
+            var t2 = Task.Run(async () => await _testedService.LogInAsync());
+
+            //assert
+            var exception = Assert.ThrowsAsync(typeof(InvalidOperationException), async () => await Task.WhenAll(t1, t2));
+            Assert.AreEqual("A login operation is already in progress.", exception.Message);
         }
     }
 

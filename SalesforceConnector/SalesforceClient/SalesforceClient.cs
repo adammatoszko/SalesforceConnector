@@ -22,6 +22,7 @@ namespace SalesforceConnector.Client
 {
     public class SalesforceClient : ISalesforceClient
     {
+        private int _taken;
         private static Lazy<HttpClient> _clientInitializer;
         private readonly ILogger<SalesforceClient> _logger;
         private readonly IHttpMessageService _messageService;
@@ -44,12 +45,23 @@ namespace SalesforceConnector.Client
         {
             try
             {
-                _logger?.LogDebug("Logging in...");
-                HttpRequestMessage message = _messageService.BuildLoginMessage();
-                HttpResponseMessage response = await _client.SendAsync(message, token).ConfigureAwait(false);
-                await _messageService.ProcessLoginResponseAsync(response, token).ConfigureAwait(false);
+                if (Interlocked.Increment(ref _taken) == 1)
+                {
+                    _logger?.LogDebug("Logging in...");
+                    HttpRequestMessage message = _messageService.BuildLoginMessage();
+                    HttpResponseMessage response = await _client.SendAsync(message, token).ConfigureAwait(false);
+                    await _messageService.ProcessLoginResponseAsync(response, token).ConfigureAwait(false);
+                }
+                else
+                {
+                    throw new InvalidOperationException("A login operation is already in progress.");
+                }
             }
             catch (OperationCanceledException) { }
+            finally
+            {
+                Interlocked.Decrement(ref _taken);
+            }
         }
 
         public async Task LogOutAsync(CancellationToken token = default)
